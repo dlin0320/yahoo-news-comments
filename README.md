@@ -1,26 +1,41 @@
-# Yahoo News Comments
-This project is to scrape the comments from Yahoo News articles and store them in a database.  The comments then can be retrieved throught a REST API for further analysis.
+# Yahoo News comments scraper
+This project is a simple scraper that scrapes the comments from Yahoo News articles and stores them in a database. The comments then can be retrieved through an API endpoint for further analysis.
+
+## Project structure
+
+### APP
+A simple nodejs application that provides the API endpoints and schedules the crawling job periodically.
+
+### Crawler
+A playwright based crawler that crawls the comments from Yahoo News articles at https://tw.news.yahoo.com/world/ and stores them in the database.
+
+Target articles page
+
+<img src="./articles.png" alt="Articles" width="900"/>
+
+Target comments page
+
+<img src="./comments.png" alt="Comments" width="900"/>
+
+### Database
+A postgres database to store the comments.
 
 ## Prerequisites
 * Docker
 
 ## How to run
 
-*first time running*
-
-run the following command to create the volume for the database
+*Create the volume for the database*
 ```
 docker volume create yahoo-news-comments-db  
 ```
 
-*subsequent runs*
-
-just run the following command to start the containers
+*Start the containers*
 ```
-docker-compose up
+docker-compose -f docker-compose.prod.yml up
 ```
 
-*stop the containers*
+*Stop the containers*
 
 ```
 docker-compose down
@@ -31,4 +46,9 @@ docker-compose down
 ### Get all articles with comments
 ```
 GET http://localhost:3000/articles
+```
+
+### Get crawler statistics
+```
+GET http://localhost:3000/statistics
 ```

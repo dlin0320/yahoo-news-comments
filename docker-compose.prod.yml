@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  postgres:
+    build: 
+      context: .
+      dockerfile: dockerfile.postgres
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: ${PGDATA}
+    volumes:
+      - yahoo-news-comments-db:/data/postgres
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-h", "localhost", "-p", "5432", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: dockerfile.node
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  yahoo-news-comments-db:
+    external: true
