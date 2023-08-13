@@ -1,4 +1,5 @@
 import { chromium } from "playwright-chromium";
+import schedule from "node-schedule";
 import fastq from "fastq";
 import { insertArticle, insertComment } from "./db";
 
@@ -14,6 +15,7 @@ class Crawler {
   constructor(target_url: string) {
     this.target_url = target_url;
     this.tasks = fastq(this.getCommentsFromLink, 1);
+    this.getArticlesWithComments();
   }
 
   test = async () => {
@@ -24,6 +26,17 @@ class Crawler {
     const title = await page.title();
     await browser.close();
     return title;
+  }
+
+  schedule = (hour: number, minute: number, second: number) => {
+    const rule = new schedule.RecurrenceRule();
+    rule.hour = hour;
+    rule.minute = minute;
+    rule.second = second;
+    schedule.scheduleJob(rule, () => {
+      console.log("running...");
+      this.getArticlesWithComments();
+    });
   }
 
   getArticlesWithComments = async () => {

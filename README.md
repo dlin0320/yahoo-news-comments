@@ -38,7 +38,7 @@ docker-compose -f docker-compose.prod.yml up
 *Stop the containers*
 
 ```
-docker-compose down
+docker-compose down -f docker-compose.prod.yml
 ```
 
 ## APIs
@@ -48,7 +48,18 @@ docker-compose down
 GET http://localhost:3000/articles
 ```
 
-### Get crawler statistics
+### Get crawler schedules
 ```
-GET http://localhost:3000/statistics
+GET http://localhost:3000/schedules
+```
+
+### Create a crawler schedule
+```
+POST http://localhost:3000/schedules
+Body:
+{
+  "hour": number,
+  "minute": number,
+  "second": number
+}
 ```

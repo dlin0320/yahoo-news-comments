@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS schedules (
+    id SERIAL PRIMARY KEY,
+    hour INTEGER NOT NULL,
+    minute INTEGER NOT NULL,
+    second INTEGER NOT NULL,
+    task_name TEXT NOT NULL
+);

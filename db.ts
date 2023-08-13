@@ -10,6 +10,13 @@ interface CommentData {
   text: string;
 }
 
+interface ScheduleData {
+  hour: number;
+  minute: number;
+  second: number;
+  taskName: string;
+}
+
 const pool = new pg.Pool({
   host: process.env.POSTGRES_CONTAINER_NAME,
   user: process.env.POSTGRES_USER,
@@ -46,6 +53,21 @@ const insertComment = async (commentData: CommentData) => {
   }
 }
 
+const insertSchedule = async (scheduleData: ScheduleData) => {
+  const query = `
+    INSERT INTO schedules (hour, minute, second, task_name)
+    VALUES ($1, $2, $3, $4)
+  `;
+  const values = [scheduleData.hour, scheduleData.minute, 
+    scheduleData.second, scheduleData.taskName];
+
+  try {
+    await pool.query(query, values);
+  } catch (error) {
+    console.error('Error inserting schedule:', error);
+  }
+}
+
 const getAllArticles = async (): Promise<ArticleData[]> => {
   const query = `
     SELECT title, link
@@ -78,4 +100,29 @@ const getCommentsForArticle = async (articleLink: string): Promise<CommentData[]
   }
 }
 
-export { ArticleData, CommentData, insertArticle, insertComment, getAllArticles, getCommentsForArticle };
+const getAllSchedules = async (): Promise<ScheduleData[]> => {
+  const query = `
+    SELECT hour, minute, second, task_name
+    FROM schedules
+  `;
+
+  try {
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching schedule:', error);
+    return [];
+  }
+}
+
+export { 
+  ArticleData, 
+  CommentData, 
+  ScheduleData, 
+  insertArticle, 
+  insertComment, 
+  insertSchedule, 
+  getAllArticles, 
+  getCommentsForArticle, 
+  getAllSchedules 
+};
