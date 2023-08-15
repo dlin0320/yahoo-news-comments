@@ -1,25 +1,25 @@
 import schedule from "node-schedule";
-import { ScheduleData, insertSchedule, getAllSchedules } from "./db";
+import { OnceData, RegularData } from "./types";
 
 class Scheduler {
-  tasks: { [name: string]: () => void };
+  jobs: { [name: string]: () => void } = {};
 
-  constructor(tasks: { [name: string]: () => void }) {
-    this.tasks = tasks;
-    getAllSchedules().then(schedules => {
-      schedules.forEach(schedule => {
-        this.schedule(schedule);
-      });
-    });
+  newJob = (name: string, cb: () => void) => {
+    this.jobs[name] = cb;
   }
 
-  schedule = (scheduleData: ScheduleData) => {
+  once = (data: OnceData, cb: () => void) => {
+    if (data.retries > 0) {
+      schedule.scheduleJob(data.date, cb);
+    }
+  }
+
+  regular = (data: RegularData, cb: () => void) => {
     const rule = new schedule.RecurrenceRule();
-    rule.hour = scheduleData.hour;
-    rule.minute = scheduleData.minute;
-    rule.second = scheduleData.second;
-    schedule.scheduleJob(rule, this.tasks[scheduleData.taskName]);
-    insertSchedule(scheduleData);
+    rule.hour = data.hour;
+    rule.minute = data.minute;
+    rule.second = data.second;
+    schedule.scheduleJob(rule, cb);
   }
 }
 

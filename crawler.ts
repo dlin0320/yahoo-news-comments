@@ -1,47 +1,18 @@
 import { chromium } from "playwright-chromium";
-import schedule from "node-schedule";
-import fastq from "fastq";
-import { insertArticle, insertComment } from "./db";
-
-interface JobData {
-  link: string;
-  retries: number;
-}
+import { ArticleData, CrawlData } from "./types";
 
 class Crawler {
   target_url: string;
-  tasks: fastq.queue;
 
-  constructor(target_url: string) {
-    this.target_url = target_url;
-    this.tasks = fastq(this.getCommentsFromLink, 1);
-    this.getArticlesWithComments();
+  constructor() {
+    this.target_url = process.env.TARGET_URL ?? "https://tw.news.yahoo.com/world/";
   }
 
-  test = async () => {
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.goto("https://google.com");
-    const title = await page.title();
-    await browser.close();
-    return title;
-  }
-
-  schedule = (hour: number, minute: number, second: number) => {
-    const rule = new schedule.RecurrenceRule();
-    rule.hour = hour;
-    rule.minute = minute;
-    rule.second = second;
-    schedule.scheduleJob(rule, () => {
-      console.log("running...");
-      this.getArticlesWithComments();
-    });
-  }
-
-  getArticlesWithComments = async () => {
+  getArticles = async (): Promise<ArticleData[] | undefined> => {
     console.log('scraping articles')
+
     try {
+      const articles: ArticleData[] = [];
       const browser = await chromium.launch();
       const context = await browser.newContext();
       const page = await context.newPage();
@@ -59,34 +30,36 @@ class Crawler {
 
       console.log("scrolling done");
 
-      const articles = await page.$$(".js-stream-content");
+      const contents = await page.$$(".js-stream-content");
 
-      for (const article of articles) {
-        const hasComments = await article.$(".comment-btn-count");
+      for (const content of contents) {
+        const hasComments = await content.$(".comment-btn-count");
         if (hasComments) {
-          const anchor = await article.$("a");
+          const anchor = await content.$("a");
           const title = await anchor?.textContent();
           const href = await anchor?.getAttribute("href");
           if (title && href) {
             const link = `${this.target_url}${href}`;
-            this.tasks.push({ link, retries: 3 });
-            await insertArticle({ title, link });
+            articles.push({ title, link });
           }
         }
       }
-
       await browser.close();
+
+      return articles;
     } catch (error) {
       console.error(error);
+      return [];
     }
   }
 
-  getCommentsFromLink = async (jobData: JobData, cb: (error?: any) => void) => {
+  getComments = async (crawlData: CrawlData): Promise<string[] | undefined> => {
     try {
+      const comments: string[] = [];
       const browser = await chromium.launch();
       const context = await browser.newContext();
       const page = await context.newPage();
-      await page.goto(jobData.link);
+      await page.goto(crawlData.link);
       const container = await page.waitForSelector("#community-bar-container");;
       await container.hover();
       const iFrame = await container.waitForSelector("iframe");
@@ -95,30 +68,25 @@ class Crawler {
       if (frameContent) {
         const commentsTitle = await frameContent.waitForSelector(".comments-title");
         await commentsTitle.click();
-        const comments = await frameContent.waitForSelector(".comments-body .comments-list");
-        const commentsList = await comments.$$(".Wow\\(bw\\)");
+        const commentsBody = await frameContent.waitForSelector(".comments-body .comments-list");
+        const commentsList = await commentsBody.$$(".Wow\\(bw\\)");
         for (const comment of commentsList) {
           const text = (await comment.textContent()) ?? "";
           console.log(text);
-          await insertComment({ article_link: jobData.link, text });
+          // await insertComment({ article_link: crawlData.link, text });
+          comments.push(text);
         }
+
+        return comments;
       } else {
         console.log("iFrame not found")
       }
 
       await browser.close();
 
-      setTimeout(() => {
-        console.log("done", this.tasks.length(), "remaining");
-      }, 10000);
+      return comments;
     } catch (error) {
       console.error(error);
-
-      if (jobData.retries > 1) {
-        this.tasks.push({ link: jobData.link, retires: jobData.retries - 1 });
-      }
-    } finally {
-      cb();
     }
   }
 }
